@@ -6,23 +6,26 @@ from colorama import init, Fore, Style
 import psutil
 from collections import deque
 
-# For command history and tab-completion on Windows
+# ---------- COMMAND HISTORY & AUTO-COMPLETION ----------
 try:
-    import pyreadline3 as readline
+    import readline  # classic pyreadline on Windows
 except ImportError:
-    print("pyreadline3 not installed. Command history and tab-completion will not work.")
+    print("readline/pyreadline not installed. Command history and tab-completion will not work.")
 
 # Initialize colorama
 init(autoreset=True)
 
-# ---------- COMMAND HISTORY & AUTO-COMPLETION ----------
+# Setup tab-completion if readline is available
 if 'readline' in globals():
     readline.parse_and_bind("tab: complete")
     readline.set_completer_delims(' \t\n;')
     def complete(text, state):
         line = readline.get_line_buffer().split()
         if not line:
-            return [c + os.sep for c in os.listdir('.')][state]
+            try:
+                return [c + os.sep for c in os.listdir('.')][state]
+            except IndexError:
+                return None
         else:
             matches = [f for f in os.listdir('.') if f.startswith(text)]
             if state < len(matches):
@@ -41,51 +44,14 @@ def log_session(command, output):
 undo_stack = deque(maxlen=20)
 redo_stack = deque(maxlen=20)
 
-# ---------- NLP PARSER WITH CONDITIONALS ----------
+# ---------- NLP PARSER ----------
 def parse_nlp(command):
-    """
-    Returns a list of tuples: (cmd, args, conditional)
-    conditional can be None, "exists", "not_exists"
-    """
     command = command.lower().strip()
-
-    # Handle if-then-else
-    if command.startswith("if "):
-        m = re.match(r'if (.+?) then (.+?)(?: else (.+))?$', command)
-        if m:
-            condition, then_cmd, else_cmd = m.group(1), m.group(2), m.group(3)
-            # Determine conditional
-            cond_flag = None
-            cond_flag_not = None
-            if "exists" in condition:
-                cond_flag = "exists"
-            elif "not exists" in condition:
-                cond_flag = "not_exists"
-            # Execute based on condition
-            if cond_flag == "exists":
-                target = re.search(r'file (\S+)|folder (\S+)', condition)
-                target_path = target.group(1) if target.group(1) else target.group(2)
-                if os.path.exists(target_path):
-                    return parse_nlp(then_cmd)
-                elif else_cmd:
-                    return parse_nlp(else_cmd)
-            elif cond_flag == "not_exists":
-                target = re.search(r'file (\S+)|folder (\S+)', condition)
-                target_path = target.group(1) if target.group(1) else target.group(2)
-                if not os.path.exists(target_path):
-                    return parse_nlp(then_cmd)
-                elif else_cmd:
-                    return parse_nlp(else_cmd)
-        # fallback
-        return [(command, None, None)]
-
-    # Split multi-step commands
     steps = re.split(r',| and ', command)
     parsed_steps = []
 
     for step in steps:
         step = step.strip()
-        # Conditional exists/not exists inline
         conditional = None
         if " if it doesn't exist" in step:
             step = step.replace(" if it doesn't exist", "")
@@ -94,7 +60,6 @@ def parse_nlp(command):
             step = step.replace(" if exists", "")
             conditional = "exists"
 
-        # Commands
         if step.startswith("create folder") or step.startswith("make folder"):
             folder = step.split()[-1]
             parsed_steps.append(("mkdir", folder, conditional))
@@ -122,7 +87,7 @@ def parse_nlp(command):
         elif step == "ps":
             parsed_steps.append(("ps", None, None))
         else:
-            parsed_steps.append((step, None, None))  # fallback
+            parsed_steps.append((step, None, None))
 
     return parsed_steps
 
