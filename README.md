@@ -36,12 +36,7 @@ A fully functional **Python-based terminal emulator** that mimics a real system 
 
 ---
 
-## 📦 Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/<your-username>/python-command-terminal.git
-cd python-command-terminal
+## Linkedin Post Link: https://www.linkedin.com/posts/iliyas4khan_srmhackswithcodemate-srmhackswithcodemat-activity-7375478387257253888-r7fP?utm_source=share&utm_medium=member_desktop&rcm=ACoAAEIC0tcBL4EV25pr36eHkLHyvvd1ysIeX6M
 
 # Create and activate virtual environment
 python -m venv venv
